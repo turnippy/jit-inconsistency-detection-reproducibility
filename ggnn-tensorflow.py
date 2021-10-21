@@ -67,7 +67,7 @@ class ggnn(tf.module):
                                                                            use_bias=use_bias_for_message_linear,
                                                                            activation=None)
                 setattr(self,
-                        'state_to_message_linear_layer%d_type^d,' % (layer_idx, edge_type_j),
+                        'state_to_message_linear_layer%d_type%d,' % (layer_idx, edge_type_j),
                         state_to_msg_linear_layer_i_type_j
                         )
                 state_to_msg_linears_cur_layer.append(state_to_msg_linear_layer_i_type_j)
@@ -85,4 +85,21 @@ class ggnn(tf.module):
         self.rnn_dropout_layer = tf.keras.layers.Dropout(self.rnn_dropout)
 
     def device(self):
-        return self.rnn_cells[0]
+        # not sure how to get hidden hidden tensor in tf, or what is equivalent
+        # see issues
+        # return self.rnn_cells[0]
+        pass
+
+    def forward(self, initial_node_representation, adj_lists, return_all_states=False):
+        return self.compute_node_representation(initial_node_representation, adj_lists, return_all_states)
+
+    def compute_node_representation(self,
+                                    initial_node_representation,
+                                    adj_lists,
+                                    return_all_states=False):
+        init_node_repr_size = initial_node_representation.size(1)
+        device = adj_lists[0].data.device
+        if init_node_repr_size < self.hidden_size:
+            # if dimensions of embedding are smaller than current node dimension, pad embedding
+            pad_size = self.hidden_size - init_node_repr_size
+            zeroes = 
