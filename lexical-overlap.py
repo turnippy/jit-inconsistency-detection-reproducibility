@@ -43,13 +43,31 @@ class LexicalOverlap:
 
     def generate_result(self):
         for value in self.data:
+            # diff = value["token_diff_code_subtokens"]
+            old_comment_st = value["old_comment_subtokens"]
+            # diff = value["span_diff_code_subtokens"]
             diff = value["token_diff_code_subtokens"]
             label = value["label"]
             self.labels.append(label)
             inconsistent = 0
 
-            if "<DELETE>" in diff or "REPLACE_OLD" in diff:
-                inconsistent = 1
+            # or "REPLACE_OLD" in diff
+            if "<DELETE>" in diff:
+                ind_delete = diff.index("<DELETE>")
+                txt = diff[ind_delete + 1]
+                if txt in old_comment_st:
+                    inconsistent = 1
+
+            elif "<REPLACE_OLD>" in diff:
+                ind_rpl = diff.index("<REPLACE_OLD>")
+                txt = diff[ind_rpl + 1]
+                if txt in old_comment_st:
+                    inconsistent = 1
 
             self.results.append(inconsistent)
+        # for label in self.labels:
+        #     if label == 1:
+        #         count_label = count_label + 1
+        #     else:
+        #         count_label_zero = count_label_zero + 1
         evaluate(self.labels, self.results)
