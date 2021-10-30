@@ -5,9 +5,9 @@ path = "./data"
 data_elements = os.listdir(path)
 param_path = f'{path}/{data_elements[0]}'
 
-def ParamTest(*kwgs) -> list:
+def ParamDataSet(dataset,*kwgs) -> list:
     
-    param_test = f'{param_path}/test.json'
+    param_test = f'{param_path}/{dataset}.json'
     with open(param_test,"r") as files: 
         param_test = json.loads(files.read())
     result = {kwg:[] for kwg in kwgs}
@@ -20,7 +20,8 @@ if __name__ == "__main__":
     data_elements = os.listdir(path)
     
     param_path = f'{path}/{data_elements[0]}'
-    result = ParamTest("old_comment_raw","old_code_raw")
+    result = ParamDataSet('train',"old_comment_raw","old_code_raw")
     
+    train = ParamDataSet('test',"old_comment_raw","old_code_raw")
     
     

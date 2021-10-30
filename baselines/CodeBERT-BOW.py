@@ -4,8 +4,11 @@ from transformers.file_utils import TRANSFORMERS_CACHE
 import torch
 from torch import nn
 import torch.nn.functional as F
+from tqdm import tqdm
+import numpy as np
+import random
 
-from data import ParamTest
+from data import ParamDataSet
 
 # ToDo: determine DROPOUT_RATE
 DROPOUT_RATE = 0.5
@@ -16,18 +19,15 @@ output_size = 3
 # ToDo: determine NUM_CLASSES
 NUM_CLASSES = 2
 
-# ToDo: determine labels
-labels = ""
-
 # # ToDo: determine factors
 # factor = None
 
 class Network(nn.Module):
 
-    def __init__(self,output_size):
+    def __init__(self,input_size):
         super(Network, self).__init__()
 
-        self.fc1 = nn.Linear(output_size,CLASSIFICATION_HIDDEN_SIZE)
+        self.fc1 = nn.Linear(input_size,CLASSIFICATION_HIDDEN_SIZE)
         self.fc2 = nn.Linear(CLASSIFICATION_HIDDEN_SIZE,CLASSIFICATION_HIDDEN_SIZE)
         self.classification_dropout_layer = nn.Dropout(p=DROPOUT_RATE)
         self.output_layer = nn.Linear(CLASSIFICATION_HIDDEN_SIZE,NUM_CLASSES)
@@ -38,7 +38,32 @@ class Network(nn.Module):
         output = self.fc2(output)
         output = self.classification_dropout_layer(output)
         output = self.output_layer(output)
+        output = F.log_softmax(output,dim=-1)
         return output
+
+    def train(self,dataset):
+        iter = 0
+        for data,labels in tqdm(dataset):
+
+            # Clear gradients w.r.t. parameters
+            optimizer.zero_grad()
+
+            # Forward pass to get output/logits
+            outputs = model(data)
+
+            # Calculate Loss: softmax --> cross entropy loss
+            loss = F.nll_loss(outputs, labels)
+
+            # Getting gradients w.r.t. parameters
+            loss.backward()
+
+            # Updating parameters
+            optimizer.step()
+
+            iter += 1
+            if iter == 1: print(f'{iter} {loss.item()}')
+        print(f'{iter} {loss.item()}')
+
 
 class CodeBERT:
 
@@ -64,42 +89,61 @@ class CodeBERT:
 
         # embeddings = model.embeddings(input_ids) * mask
         embeddings = self.model.embeddings(torch.tensor(input_ids).unsqueeze(0)) * mask
-
         # factor ?
         # vector = torch.sum(embeddings, dim=1)/torch.sum(factor, dim=1)
         # return vector
         return torch.sum(embeddings, dim=1)
 
+class DataSet:
 
-def baseline():
-    cb = CodeBERT()
+    def __init__(self):
+        self.cb = CodeBERT()
+        self.max_length = self.cb.max_length
 
-    comment_vector = cb.get_bow_representation(comment_sequence)
+    def get_raw_data(self,dataset):
+        return ParamDataSet(dataset,
+        "old_comment_raw", "old_code_raw", "label")
 
-    code_vector = cb.get_bow_representation(code_sequence)
+    def get_feature_vector(self,comment_sequence,code_sequence):
+        comment_vector = self.cb.get_bow_representation(comment_sequence)
+        code_vector = self.cb.get_bow_representation(code_sequence)
+        feature_vector = torch.cat([comment_vector, code_vector], dim=-1)
+        return feature_vector
+
+    def get_data_set(self,dataset):
+        comment_sequences, code_sequences, labels = self.get_raw_data(dataset)
+        print(len(comment_sequences))
+        test_set = list()
+        for comment_sequence,code_sequence,label in tqdm(zip(comment_sequences,code_sequences,labels)):
+            feature_vector = self.get_feature_vector(comment_sequence,code_sequence)
+            test_set.append([feature_vector,torch.tensor([label])])
     
-    feature_vector = torch.cat([comment_vector, code_vector], dim=-1)
-
-    print(feature_vector)
-
-
-    # logits = output_layer(classification_dropout_layer(
-    #     F.relu(fc1(feature_vector))))
-
-    # print(logits)
-
-    # logprobs = F.log_softmax(logits, dim=-1)
-
-    # print(logprobs)
-
-    # loss = F.nll_loss(logprobs, labels)
-
+        return test_set
 
 if __name__ == "__main__":
+    print(f"CodeBERT-BOW Baseline")
 
-    comment_sequence, code_sequence = ParamTest(
-        "old_comment_raw", "old_code_raw")
+    ds = DataSet()
 
-    comment_sequence, code_sequence = comment_sequence[0], code_sequence[0]
+    # train data set require memory more than 32 GB
+    data_set = ds.get_data_set('test')
+    train,test = data_set[:int(len(data_set)*0.8)],data_set[int(len(data_set)*0.8):]
+    print(f'{len(train)} {len(test)}')
 
-    baseline()
+    # forward network
+    input_size = 1536
+    model = Network(input_size)
+    learning_rate = 0.1
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)  
+
+    # train the model
+    # enable to run, but not sure
+    model.train(train)
+
+    test_output = model(test[0][0])
+
+    print(test_output)
+    print(test[0])
+
+
+    
