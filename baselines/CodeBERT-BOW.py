@@ -3,7 +3,9 @@ from transformers import RobertaTokenizer, RobertaModel
 from transformers.file_utils import TRANSFORMERS_CACHE
 import torch
 from torch import nn
+import torch.nn.functional as F
 
+from data import ParamTest
 
 # ToDo: determine DROPOUT_RATE
 DROPOUT_RATE = 0.5
@@ -12,70 +14,92 @@ CLASSIFICATION_HIDDEN_SIZE = 10
 # ToDo: determine output_size
 output_size = 3
 # ToDo: determine NUM_CLASSES
-NUM_CLASSES = 4
+NUM_CLASSES = 2
 
-# ToDo: determine comment_sequence
-comment_sequence = ""
-# ToDo: determine code_sequence
-code_sequence = ""
 # ToDo: determine labels
 labels = ""
-# ToDo: determine factors
-factor = None
+
+# # ToDo: determine factors
+# factor = None
+
+class Network(nn.Module):
+
+    def __init__(self,output_size):
+        super(Network, self).__init__()
+
+        self.fc1 = nn.Linear(output_size,CLASSIFICATION_HIDDEN_SIZE)
+        self.fc2 = nn.Linear(CLASSIFICATION_HIDDEN_SIZE,CLASSIFICATION_HIDDEN_SIZE)
+        self.classification_dropout_layer = nn.Dropout(p=DROPOUT_RATE)
+        self.output_layer = nn.Linear(CLASSIFICATION_HIDDEN_SIZE,NUM_CLASSES)
+
+    def forward(self,input):
+        output = self.fc1(input)
+        output = F.relu(output)
+        output = self.fc2(output)
+        output = self.classification_dropout_layer(output)
+        output = self.output_layer(output)
+        return output
+
+class CodeBERT:
+
+    def __init__(self):
+        self.model = RobertaModel.from_pretrained(
+        "microsoft/codebert-base", cache_dir=TRANSFORMERS_CACHE)
+        self.tokenizer = RobertaTokenizer.from_pretrained(
+        "microsoft/codebert-base", cache_dir=TRANSFORMERS_CACHE)
+        self.max_length = 512
+
+    def get_inputs(self,input_text):
+        tokens = self.tokenizer.tokenize(input_text)
+        length = min(len(tokens), self.max_length)
+        tokens = tokens[:length]
+        token_ids = self.tokenizer.convert_tokens_to_ids(tokens)
+        padding_length = self.max_length - len(tokens)
+        token_ids += [self.tokenizer.pad_token_id]*padding_length
+        return token_ids, length
+
+    def get_bow_representation(self,sequence):
+        input_ids, length = self.get_inputs(sequence)
+        mask = (torch.arange(self.max_length) < length).unsqueeze(-1).float()
+
+        # embeddings = model.embeddings(input_ids) * mask
+        embeddings = self.model.embeddings(torch.tensor(input_ids).unsqueeze(0)) * mask
+
+        # factor ?
+        # vector = torch.sum(embeddings, dim=1)/torch.sum(factor, dim=1)
+        # return vector
+        return torch.sum(embeddings, dim=1)
 
 
-def get_inputs(input_text):
+def baseline():
+    cb = CodeBERT()
 
-    tokens = tokenizer.tokenize(input_text)
+    comment_vector = cb.get_bow_representation(comment_sequence)
 
-    length = min(len(tokens), max_length)
+    code_vector = cb.get_bow_representation(code_sequence)
+    
+    feature_vector = torch.cat([comment_vector, code_vector], dim=-1)
 
-    tokens = tokens[:length]
-    token_ids = tokenizer.convert_tokens_to_ids(tokens)
-    padding_length = max_length - len(tokens)
-    token_ids += [tokenizer.pad_token_id]*padding_length
-    return token_ids, length
+    print(feature_vector)
 
 
-def get_bow_representation(sequence):
+    # logits = output_layer(classification_dropout_layer(
+    #     F.relu(fc1(feature_vector))))
 
-    input_ids, length = get_inputs(sequence, max_length)
-    mask = (torch.arange(max_length) < length).unsqueeze(-1).float()
-    embeddings = model.embeddings(input_ids) * mask
-    # factor ?
-    vector = torch.sum(embeddings, dim=1)/torch.sum(factor, dim=1)
-    return vector
+    # print(logits)
+
+    # logprobs = F.log_softmax(logits, dim=-1)
+
+    # print(logprobs)
+
+    # loss = F.nll_loss(logprobs, labels)
 
 
 if __name__ == "__main__":
-    print("CodeBERT-BOW baseline")
 
-    tokenizer = RobertaTokenizer.from_pretrained(
-        "microsoft/codebert-base", cache_dir=TRANSFORMERS_CACHE)
-    model = RobertaModel.from_pretrained(
-        "microsoft/codebert-base", cache_dir=TRANSFORMERS_CACHE)
+    comment_sequence, code_sequence = ParamTest(
+        "old_comment_raw", "old_code_raw")
 
-    max_length = 512
+    comment_sequence, code_sequence = comment_sequence[0], code_sequence[0]
 
-    print(tokenizer)
-
-    print(model)
-
-    classification_dropout_layer = nn.Dropout(p=DROPOUT_RATE)
-
-    fc1 = nn.Linear(output_size, CLASSIFICATION_HIDDEN_SIZE)
-    fc2 = nn.Linear(CLASSIFICATION_HIDDEN_SIZE, CLASSIFICATION_HIDDEN_SIZE)
-    output_layer = nn.Linear(CLASSIFICATION_HIDDEN_SIZE, NUM_CLASSES)
-
-    comment_vector = get_bow_representation(comment_sequence)
-
-    code_vector = get_bow_representation(code_sequence)
-
-    feature_vector = torch.cat([comment_vector, code_vector], dim=-1)
-
-    logits = output_layer(classification_dropout_layer(
-        torch.nn.functional.relu(fc1(feature_vector))))
-
-    logprobs = torch.nn.functional.log_softmax(logits, dim=-1)
-
-    loss = torch.nn.functional.nll_loss(logprobs, labels)
+    baseline()

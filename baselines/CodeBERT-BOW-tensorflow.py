@@ -10,9 +10,11 @@ from transformers import RobertaTokenizer, RobertaModel
 from transformers.file_utils import TRANSFORMERS_CACHE
 
 import tensorflow as tf
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.layers import Dropout
-
+try: 
+    from tensorflow.keras.layers import Dense
+    from tensorflow.keras.layers import Dropout
+except:
+    from tensorflow.python.keras.layers import Dropout, Dense
 
 # ToDo: determine DROPOUT_RATE
 DROPOUT_RATE = 0.5
