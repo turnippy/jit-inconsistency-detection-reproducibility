@@ -17,7 +17,7 @@ CLASSIFICATION_HIDDEN_SIZE = 10
 # ToDo: determine output_size
 output_size = 3
 # ToDo: determine NUM_CLASSES
-NUM_CLASSES = 2
+NUM_CLASSES = 1
 
 # # ToDo: determine factors
 # factor = None
@@ -29,21 +29,22 @@ class Network(nn.Module):
 
         self.fc1 = nn.Linear(input_size,CLASSIFICATION_HIDDEN_SIZE)
         self.fc2 = nn.Linear(CLASSIFICATION_HIDDEN_SIZE,CLASSIFICATION_HIDDEN_SIZE)
-        self.classification_dropout_layer = nn.Dropout(p=DROPOUT_RATE)
+        # self.classification_dropout_layer = nn.Dropout(p=DROPOUT_RATE)
         self.output_layer = nn.Linear(CLASSIFICATION_HIDDEN_SIZE,NUM_CLASSES)
 
     def forward(self,input):
         output = self.fc1(input)
         output = F.relu(output)
         output = self.fc2(output)
-        output = self.classification_dropout_layer(output)
+        # output = self.classification_dropout_layer(output)
         output = self.output_layer(output)
-        output = F.log_softmax(output,dim=-1)
+        # output = F.softmax(output,dim=-1)
+        output = F.sigmoid(output)
         return output
 
     def train(self,dataset):
         iter = 0
-        for data,labels in tqdm(dataset):
+        for data,labels in dataset:
 
             # Clear gradients w.r.t. parameters
             optimizer.zero_grad()
@@ -60,8 +61,7 @@ class Network(nn.Module):
             # Updating parameters
             optimizer.step()
 
-            iter += 1
-            if iter == 1: print(f'{iter} {loss.item()}')
+            print(f'{iter} {loss.item()}')
         print(f'{iter} {loss.item()}')
 
 
