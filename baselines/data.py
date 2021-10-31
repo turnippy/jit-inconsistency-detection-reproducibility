@@ -1,7 +1,7 @@
 import os
 import json
 
-path = "./data"
+path = "/home/lofowl/Desktop/data"
 data_elements = os.listdir(path)
 param_path = f'{path}/{data_elements[0]}'
 
@@ -14,7 +14,7 @@ def ParamDataSet(dataset,*kwgs) -> list:
     for param in param_test:
         for kwg in kwgs:
             result[kwg] = result[kwg] + [param[kwg]]
-    return result.values()
+    return list(result.values())
 
 if __name__ == "__main__":
     data_elements = os.listdir(path)
@@ -24,4 +24,6 @@ if __name__ == "__main__":
     
     train = ParamDataSet('test',"old_comment_raw","old_code_raw")
     
+    for i in train:
+        print(i)
     

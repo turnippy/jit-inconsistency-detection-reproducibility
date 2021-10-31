@@ -26,3 +26,5 @@ class BiGru (tf.Module):
     def forward(selfself, src_embedded_tokens, src_lengths, device):
         encoder_hidden_states, _ = self.__rnn.forward(src_embedded_tokens)
         return encoder_hidden_states, encoder_final_state
+
+
