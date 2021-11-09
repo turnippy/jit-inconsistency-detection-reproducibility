@@ -103,7 +103,7 @@ class DataSet:
 
     def get_raw_data(self,dataset):
         return ParamDataSet(dataset,
-        "old_comment_raw", "old_code_raw", "label")
+        "old_comment_raw", "new_code_raw", "label")
 
     def get_feature_vector(self,comment_sequence,code_sequence):
         comment_vector = self.cb.get_bow_representation(comment_sequence)

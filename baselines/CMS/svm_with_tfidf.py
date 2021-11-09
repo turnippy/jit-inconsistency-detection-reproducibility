@@ -28,7 +28,8 @@ def transfer_column(comment_column, code_column):
 if __name__ == "__main__":
     # Set X and y
     # @todo: provide location of our dataset
-    df = pd.read_json("data/Param/train.json")
+    path = "/home/lofowl/Desktop/"
+    df = pd.read_json(path+"data/Param/train.json")
 
     comment = "old_comment_subtokens"
     code = "old_code_subtokens"
@@ -56,7 +57,7 @@ if __name__ == "__main__":
     pipe.fit(X, y)
 
     # @todo: provide location of our dataset
-    df_test = pd.read_json("data/Param/test.json")
+    df_test = pd.read_json(path+"data/Param/test.json")
 
     X_test = df_test[[comment,
                       code]]
