@@ -91,7 +91,7 @@ class GGNN(tf.Module):
         # return self.rnn_cells[0]
         pass
 
-    def forward(self, init_node_representation, adj_lists, return_all_states=False):
+    def __call__(self, init_node_representation, adj_lists, return_all_states=False):
         return self.compute_node_representation(init_node_representation, adj_lists, return_all_states)
 
     def compute_node_representation(self,
